@@ -1,55 +1,23 @@
-
-from fastapi import FastAPI
-from pydantic import BaseModel
-import requests
-import os
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# ✅ Дозволити CORS-запити з будь-якого джерела
+# Додати CORS (можна вказати конкретний домен фронту замість "*")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # або ['https://твій-фронт.vercel.app']
+    allow_origins=["*"],  # або ["https://dream-post-front-v4ra.vercel.app"]
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
-
-class PostRequest(BaseModel):
-    text: str
-    image_url: str = None
+@app.get("/")
+def root():
+    return {"message": "DreamPost GPT backend active"}
 
 @app.post("/publish")
-def publish_post(req: PostRequest):
-    if req.image_url:
-        send_photo(req.image_url, req.text)
-    else:
-        send_text(req.text)
-    return {"status": "sent"}
-
-def send_text(text):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {
-        "chat_id": CHANNEL_ID,
-        "text": text,
-        "parse_mode": "HTML"
-    }
-    requests.post(url, json=payload)
-
-def send_photo(photo_url, caption):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-    payload = {
-        "chat_id": CHANNEL_ID,
-        "photo": photo_url,
-        "caption": caption,
-        "parse_mode": "HTML"
-    }
-    requests.post(url, json=payload)
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+async def handle_publish(req: Request):
+    data = await req.json()
+    print(">>> Отримано запит:", data)
+    return {"message": "✅ Успішно отримано!"}
