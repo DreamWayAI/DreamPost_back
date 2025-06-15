@@ -1,42 +1,55 @@
 
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-import openai
+from fastapi import FastAPI
+from pydantic import BaseModel
+import requests
 import os
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+# ✅ Дозволити CORS-запити з будь-якого джерела
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # або ['https://твій-фронт.vercel.app']
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
 
-@app.post("/generate")
-async def generate_text(request: Request):
-    body = await request.json()
-    prompt = body.get("prompt", "")
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=300,
-        )
-        result = response["choices"][0]["message"]["content"]
-        return {"result": result}
-    except Exception as e:
-        return {"error": str(e)}
+class PostRequest(BaseModel):
+    text: str
+    image_url: str = None
 
-@app.get("/")
-def read_root():
-    return {"message": "DreamPost GPT backend active"}
+@app.post("/publish")
+def publish_post(req: PostRequest):
+    if req.image_url:
+        send_photo(req.image_url, req.text)
+    else:
+        send_text(req.text)
+    return {"status": "sent"}
+
+def send_text(text):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": CHANNEL_ID,
+        "text": text,
+        "parse_mode": "HTML"
+    }
+    requests.post(url, json=payload)
+
+def send_photo(photo_url, caption):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+    payload = {
+        "chat_id": CHANNEL_ID,
+        "photo": photo_url,
+        "caption": caption,
+        "parse_mode": "HTML"
+    }
+    requests.post(url, json=payload)
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
