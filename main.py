@@ -1,5 +1,5 @@
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 import requests
 import os
@@ -16,12 +16,12 @@ class PostRequest(BaseModel):
 @app.post("/publish")
 def publish_post(req: PostRequest):
     if req.image_url:
-        send_photo_with_caption(req.image_url, req.text)
+        send_photo(req.image_url, req.text)
     else:
-        send_text_message(req.text)
+        send_text(req.text)
     return {"status": "sent"}
 
-def send_text_message(text):
+def send_text(text):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHANNEL_ID,
@@ -30,12 +30,16 @@ def send_text_message(text):
     }
     requests.post(url, json=payload)
 
-def send_photo_with_caption(image_url, caption):
+def send_photo(photo_url, caption):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
     payload = {
         "chat_id": CHANNEL_ID,
-        "photo": image_url,
+        "photo": photo_url,
         "caption": caption,
         "parse_mode": "HTML"
     }
     requests.post(url, json=payload)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
