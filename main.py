@@ -3,8 +3,18 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import requests
 import os
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+# ✅ Дозволити CORS-запити з будь-якого джерела
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # або ['https://твій-фронт.vercel.app']
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
